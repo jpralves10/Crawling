@@ -2,13 +2,32 @@
 
 @{
     ViewData["Title"] = "Crawling";
+
+    var message = ViewData["Message"];
 }
 
 <h2>Crawling</h2>
 
-<p>
+<!--p>
     <a asp-action="Create">Create New</a>
-</p>
+</p-->
+
+@if ((message as string).Length > 0)
+{
+    <div class="alert alert-success" role="alert">
+        @ViewData["Message"]
+    </div>
+}
+
+<form method="post" action="/Crawling/PesquisarAsync">
+    <div class="form-group">
+        <label for="termoPesquisa">Your term looking: </label>
+        <input type="text" id="termoPesquisa" name="termoPesquisa" placeholder="Your term for looking goes here" class="form-control" />
+        <small id="termoHelp" class="form-text text-muted">Insert your term for looking.</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+</br>
 <table class="table">
     <thead>
         <tr>
@@ -25,21 +44,27 @@
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Titulo)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Link)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Subtitulo)
-            </td>
-            <td>
-                @Html.ActionLink("Delete", "Delete", new { id = item.Id })
-            </td>
-        </tr>
-}
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Titulo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Link)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Subtitulo)
+                </td>
+                <td>
+                    @Html.ActionLink("Delete", "Delete", new { id = item.Id })
+                </td>
+            </tr>
+        }
     </tbody>
 </table>
+<style>
+    .alert {
+        padding: 10px;
+    }
+</style>
