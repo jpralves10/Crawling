@@ -138,8 +138,11 @@ namespace Crawling.Controllers
 
         private static async Task CrawlerApiTask(string searchQuery)
         {
-            string cx = "009702158656880571322:jjsb8vtiq0y";
-            string apiKey = "AIzaSyA_Q8Y7XlwqzVm-HPmCC3mihugudmvJTx0";
+            searchQuery = searchQuery.Replace(' ', '-');
+
+            string cx = "013209936556916087702:wysbzarp5x4";
+            //string apiKey = "AIzaSyA_Q8Y7XlwqzVm-HPmCC3mihugudmvJTx0";
+            string apiKey = "AIzaSyAt-vzuhcbmR82w-UJcm-3gUyWucxwHjSI";
             var request = WebRequest.Create("https://www.googleapis.com/customsearch/v1?key=" + apiKey + "&cx=" + cx + "&q=" + searchQuery);
 
             WebResponse response = await request.GetResponseAsync();
@@ -150,18 +153,21 @@ namespace Crawling.Controllers
             
             int countId = 0;
 
-            foreach (var item in jsonData.items)
+            if(jsonData.items != null)
             {
-                countId++;
-                var crawler = new CrawlingModel
+                foreach (var item in jsonData.items)
                 {
-                    Id = countId,
-                    Titulo = item.title,
-                    Link = item.link,
-                    Subtitulo = item.snippet
-                };
-                list.Add(crawler);
-            }
+                    countId++;
+                    var crawler = new CrawlingModel
+                    {
+                        Id = countId,
+                        Titulo = item.title,
+                        Link = item.link,
+                        Subtitulo = item.snippet
+                    };
+                    list.Add(crawler);
+                }
+            }            
         }
     }
 }
