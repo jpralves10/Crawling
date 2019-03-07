@@ -48,14 +48,28 @@ namespace Crawling.Controllers
         [HttpPost]
         public async Task<IActionResult> PesquisarAsync(string termoPesquisa)
         {
-            //await CrawlerTask(termoPesquisa);
-            await CrawlerApiTask(termoPesquisa);
+            list = new List<CrawlingModel>();
 
-            if (list.Count > 0)
+
+            if (termoPesquisa == null || termoPesquisa.Length <= 0)
             {
-                termoConsulta = $"Term '{termoPesquisa}' searched with success !";
+                termoConsulta = $"Term not searched !";
             }
-            
+            else
+            {
+                //await CrawlerTask(termoPesquisa);
+                await CrawlerApiTask(termoPesquisa);
+
+                if (list.Count > 0)
+                {
+                    termoConsulta = $"Term '{termoPesquisa}' searched with success !";
+                }
+                else
+                {
+                    termoConsulta = $"Term '{termoPesquisa}' not searched !";
+                }
+            }
+
             return RedirectToAction("Index", "Crawling");
         }
 
