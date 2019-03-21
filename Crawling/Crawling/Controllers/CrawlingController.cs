@@ -121,7 +121,7 @@ namespace Crawling.Controllers
             var html = SitacaoDespachoAduaneiroRequest();
             var htmlDocument = new HtmlDocument();
             
-            string text = System.IO.File.ReadAllText(@"C:\Users\Eficilog\Desktop\Eficilog\Crawler\1904306855\RFB - Siscomex Importação Despacho - v1.15 - 25_08_2014.html", Encoding.GetEncoding("ISO-8859-1"));
+            string text = System.IO.File.ReadAllText(@"C:\Users\Eficilog\Desktop\Eficilog\Crawler\1904306855\RFB - Siscomex Importação Despacho - v1.15 - 25_08_2014 FASE III.html", Encoding.GetEncoding("ISO-8859-1"));
 
             htmlDocument.LoadHtml(text);
             //htmlDocument.LoadHtml(html.GetAwaiter().GetResult());
@@ -131,12 +131,13 @@ namespace Crawling.Controllers
                        .Where(node => node.GetAttributeValue("class", "")
                        .Equals("conteudo-frame")).ToList();
 
-            string regexRemocaoTags = "(<style[^>]*>[.\\s\\S]*</style>|<script[^>]*>[.\\s\\S]*</script>|<!--[^-->]*-->|<a[^>]*>|<a([^>]*?:[openWindow]*)>|</a>|<tfoot>[.\\s\\S]*</tfoot>|<b>|</b>|<td[^>]*>[^<^.]+<img[^>]*>[^<^.]+</td>|<img[^>]*>)";
-            string regexLink = "openWindow";
+            string regexRemocaoTags = "(<style[^>]*>[.\\s\\S]*</style>|<script[^>]*>[.\\s\\S]*</script>|<!--[^-->]*-->|<a[^>]*>|<a([^>]*)>|</a>|<tfoot>[.\\s\\S]*</tfoot>|<b>|</b>|<td[^>]*>[^<^.]+<img[^>]*>[^<^.]+</td>|<img[^>]*>)";
+
             string regexConsulta1 = "(\\([.\\s\\S]*\\))";
             string regexConsulta2 = "<a href=\"javascript:abrePopupConsultaResumida\\([.\\s\\S]*\\)+;\">Ver consulta resumida</a>";
 
-            //string output = JsonConvert.SerializeObject(product);
+            string regexSituacaoDI1 = "(\\([.\\s\\S]*\\))";
+            string regexSituacaoDI2 = "<a href=\"javascript:openWindow\\([.\\s\\S]*\\)+;\"><img[.\\s\\S]*></a>";           
 
             SituacaoDespacho SituacaoDespacho = new SituacaoDespacho();
             var div_frame = "";
@@ -144,10 +145,12 @@ namespace Crawling.Controllers
             foreach (var div in divs)
             {
                 Match match_consulta = new Regex(regexConsulta1).Match(div.OuterHtml);
-
                 div.InnerHtml = Regex.Replace(div.OuterHtml, regexConsulta2, match_consulta.Value);
+
+                Match match_situacao_di = new Regex(regexSituacaoDI1).Match(div.OuterHtml);
+                div.InnerHtml = Regex.Replace(div.OuterHtml, regexSituacaoDI2, match_situacao_di.Value);
+
                 div.InnerHtml = Regex.Replace(div.OuterHtml, regexRemocaoTags, String.Empty);
-                div.InnerHtml = Regex.Replace(div.OuterHtml, regexLink, "[openWindow]");
 
                 try
                 {
@@ -165,29 +168,23 @@ namespace Crawling.Controllers
                 Match match_documentos = new Regex(@"Recepção de documentos").Match(div_frame);
                 Match match_afrmm = new Regex(@"AFRMM").Match(div_frame);
                 Match match_icms = new Regex(@"ICMS").Match(div_frame);
-
-                var ths = div.Descendants("th").Where(node => node.ParentNode.ParentNode.Name.Equals("thead")).ToList();
-
+                
                 if (SituacaoDespacho.Declaracao == null)
                 {
-                    if (ths.Count() > 0)
+                    SituacaoDespacho.Declaracao = new Dictionary<string, string>();
+
+                    var trs = div.Descendants("tr").Where(node => node.ParentNode.Name.Equals("tbody")).ToList();
+
+                    foreach (var tr in trs)
                     {
-                        SituacaoDespacho.Declaracao = new Dictionary<string, string>();
+                        var tds = tr.SelectNodes("td").ToList();
 
-                        var trs = div.Descendants("tr").Where(node => node.ParentNode.Name.Equals("tbody")).ToList();
+                        var declaracao = tds.ToList()[0].InnerHtml.Trim();
+                        var situacao = tds.ToList()[1].InnerHtml.Trim();
 
-                        foreach (var tr in trs)
+                        if (!SituacaoDespacho.Declaracao.ContainsKey(declaracao))
                         {
-                            var tds = tr.SelectNodes("td").ToList();
-
-                            if (tds.Count() == ths.Count())
-                            {
-                                for (int i = 0; i < ths.Count(); i++)
-                                {
-                                    SituacaoDespacho.Declaracao.Add(ths.ToArray()[i].InnerHtml.Trim(), 
-                                                                    tds.ToArray()[i].InnerHtml.Trim());
-                                }
-                            }
+                            SituacaoDespacho.Declaracao.Add(declaracao, situacao);
                         }
                     }
                 }
@@ -204,18 +201,25 @@ namespace Crawling.Controllers
 
                         var keyValue = "";
                         var skipe_td = false;
+                        var match_motivo = false;
 
                         foreach (var td in tds)
                         {
                             if (!skipe_td)
                             {
-                                Regex regex_td = new Regex(@":</td>");
-                                Match match_td = regex_td.Match(td.OuterHtml);
+                                Match match_td = new Regex(@":</td>").Match(td.OuterHtml);
 
+                                Match match_td_motivo = new Regex(@"Motivo:</td>").Match(td.OuterHtml);
+                                
                                 if (match_td.Success)
                                 {
                                     keyValue = td.InnerHtml.Trim();
                                     skipe_td = true;
+
+                                    if (match_td_motivo.Success)
+                                    {
+                                        match_motivo = true;
+                                    }
                                     continue;
                                 }
                                 else
@@ -225,7 +229,36 @@ namespace Crawling.Controllers
                             }
                             else
                             {
-                                SituacaoDespacho.SituacaoDI.Add(keyValue, td.InnerHtml.Trim());
+                                var value_td = td.InnerHtml.Trim();
+
+                                if (match_motivo)
+                                {
+                                    match_motivo = false;
+
+                                    var param = Regex.Replace(value_td, "(\\(|\\)|&#39;|'|\\s)", String.Empty).Split(",");
+
+                                    var htmlDocumentRVF = new HtmlDocument();
+
+                                    /*string htmlRVF = System.IO.File.ReadAllText(@"C:\Users\Eficilog\Desktop\Eficilog\Crawler\1904306855\com exigência\a exigência\Siscomex Importação Despacho.html", Encoding.GetEncoding("ISO-8859-1"));
+                                    htmlDocumentRVF.LoadHtml(htmlRVF);*/
+
+                                    var htmlRVF = ConsultaMotivoRequest(param[0], param[1]); 
+                                    
+                                    if(htmlRVF.GetAwaiter().GetResult().Length > 0)
+                                    {
+                                        htmlDocumentRVF.LoadHtml(htmlRVF.GetAwaiter().GetResult());
+
+                                        var textareas = htmlDocumentRVF.DocumentNode.Descendants("textarea").ToList();
+
+                                        value_td = textareas[0].InnerHtml;
+                                    }
+                                    else
+                                    {
+                                        value_td = "";
+                                    }
+                                }
+
+                                SituacaoDespacho.SituacaoDI.Add(keyValue, value_td);
                                 skipe_td = false;
                             }
                         }
@@ -236,24 +269,21 @@ namespace Crawling.Controllers
                 {
                     SituacaoDespacho.DossieDI = new Dictionary<string, string>();
 
-                    var ths2 = div.Descendants("th").Where(node => node.ParentNode.ParentNode.Name.Equals("tbody")).ToList();
+                    var trs = div.Descendants("table").Last().Descendants("tr").ToList();
 
-                    if (ths2.Count() > 0)
+                    foreach (var tr in trs)
                     {
-                        var trs = div.Descendants("tr").Where(node => node.ParentNode.Name.Equals("tbody")).ToList();
+                        var tds = tr.Descendants("td").ToList();
 
-                        foreach (var tr in trs)
+                        if(tds.Count == 2 )
                         {
-                            var tds = tr.Descendants("td").ToList();
+                            var numero = tds.ToArray()[0].InnerHtml.Trim();
+                            var dataHora = tds.ToArray()[1].InnerHtml.Trim();
 
-                            if (tds.Count() == ths2.Count())
+                            if (!SituacaoDespacho.DossieDI.ContainsKey(numero))
                             {
-                                for (int i = 0; i < ths2.Count(); i++)
-                                {
-                                    SituacaoDespacho.DossieDI.Add(ths2.ToArray()[i].InnerHtml.Trim(), 
-                                                                  tds.ToArray()[i].InnerHtml.Trim());
-                                }
-                            }
+                                SituacaoDespacho.DossieDI.Add(numero, dataHora);
+                            }                                
                         }
                     }
                 }
@@ -319,50 +349,56 @@ namespace Crawling.Controllers
 
                 if (SituacaoDespacho.SituacaoRVF == null && match_situacaoRVF.Success)
                 {
-                    SituacaoDespacho.SituacaoRVF = new Dictionary<string, string>();
+                    SituacaoDespacho.SituacaoRVF = new Dictionary<int, Dictionary<string, string>>();
 
-                    var tds_rvf = div.Descendants("td")
-                                     .Where(node => node.ParentNode.ParentNode.Name.Equals("table")).ToList();
+                    var tds_rvf = div.Descendants("td").ToList();
 
                     var info = tds_rvf.Last().InnerHtml.Trim();
 
-                    Func<int, int> func = x => x - 2;
+                    var param = Regex.Replace(info, "(\\(|\\)|&#39;|'|\\s)", String.Empty).Split(",");
 
-                    var param = info.Substring(1, func(info.Length)).Split(",");
+                    var htmlRVF = ConsultaRVFRequest(param[0], param[1], param[2], param[3], param[4]);
 
-                    var htmlRVF = ConsultaRVFRequest(param[0].Substring(1, func(param[0].Length)),
-                                                     param[1].Trim(),
-                                                     param[2].Trim(),
-                                                     param[3].Trim(),
-                                                     param[4].Trim());
-
-                    var htmlDocumentRVF = new HtmlDocument();
-                    htmlDocumentRVF.LoadHtml(htmlRVF.GetAwaiter().GetResult());
-
-                    var divRVF = htmlDocumentRVF
-                                .DocumentNode.Descendants("div")
-                                .Where(node => node.GetAttributeValue("class", "")
-                                .Equals("conteudo-frame")).ToList()[0];
-
-                    var table_rvf = divRVF.Descendants("table")
-                                          .Where(node => node.ParentNode.ParentNode.ParentNode.Name
-                                          .Equals("table")).ToList()[0];
-
-                    var ths_rvf_consulta = table_rvf.Descendants("th").ToList();
-                    var tds_rvf_consulta = table_rvf.Descendants("td").ToList();
-
-                    if (tds_rvf_consulta.Count() == ths_rvf_consulta.Count())
+                    if(htmlRVF.GetAwaiter().GetResult().Length > 0)
                     {
-                        for (int i = 0; i < ths.Count(); i++)
+                        var htmlDocumentRVF = new HtmlDocument();
+                        htmlDocumentRVF.LoadHtml(htmlRVF.GetAwaiter().GetResult());
+
+                        var divRVF = htmlDocumentRVF
+                                    .DocumentNode.Descendants("div")
+                                    .Where(node => node.GetAttributeValue("class", "")
+                                    .Equals("conteudo-frame")).ToList()[0];
+
+                        var table = divRVF.Descendants("table")
+                                              .Where(node => node.ParentNode.ParentNode.ParentNode.Name
+                                              .Equals("table")).ToList()[0];
+
+                        var trs = table.Descendants("tr").ToList();
+
+                        var ths = table.Descendants("th").ToList();
+
+                        for (int i = 0; i < trs.Count(); i++)
                         {
-                            SituacaoDespacho.SituacaoRVF.Add(ths_rvf_consulta.ToArray()[i].InnerHtml.Trim(), 
-                                                             tds_rvf_consulta.ToArray()[i].InnerHtml.Trim());
-                        }
-                    }
+                            var tds = trs[i].Descendants("td").ToList();
+
+                            if(tds.Count > 0)
+                            {
+                                var consultaResumida = new Dictionary<string, string>();
+
+                                for (int j = 0; j < ths.Count(); j++)
+                                {
+                                    consultaResumida.Add(ths.ToArray()[j].InnerHtml.Trim(),
+                                                         tds.ToArray()[j].InnerHtml.Trim());
+                                }
+                                SituacaoDespacho.SituacaoRVF.Add(i, consultaResumida);
+                            }
+                            continue;                            
+                        }                        
+                    }                    
                 }
             }
 
-            var teste = SituacaoDespacho;
+            var SituacaoDespachoJson = JsonConvert.SerializeObject(SituacaoDespacho);
         }
 
         private static async Task<string> SitacaoDespachoAduaneiroRequest()
@@ -400,16 +436,12 @@ namespace Crawling.Controllers
 
         private static async Task<string> ConsultaRVFRequest(string numero, string sequencial, string situacao, string quantidade, string tiporvf)
         {
-            //var url = "https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/ConsultarDetalheResumidoPopup.do";
-
             string url = @"https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/ConsultarDetalheResumidoPopup.do?" + 
                 "numero=" + numero + 
                 "&sequencial=" + sequencial + 
                 "&situacao=" + situacao + 
                 "&quantidade=" + quantidade + 
                 "&tipoRVF=" + tiporvf;
-
-            //Uri uri = new Uri(url);
             
             Handler = new HttpClientHandler();
             Handler.ClientCertificates.Add(Certificate);
@@ -434,6 +466,48 @@ namespace Crawling.Controllers
 
             return await response;
         }
+
+        private static async Task<string> ConsultaMotivoRequest(string numero, string tipoInterrupcao)
+        {
+            string url = @"https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/AcompanharSituacaoDespachoMotivoInterrupcao.do?" +
+                "numero=" + numero +
+                "&tipoInterrupcao=" + tipoInterrupcao;
+
+            Handler = new HttpClientHandler();
+            Handler.ClientCertificates.Add(Certificate);
+            Handler.CookieContainer = new CookieContainer();
+            Handler.UseCookies = true;
+
+            Client = new HttpClient(Handler);
+            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            request.Headers.Add("Accept", "ext/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+            request.Headers.Add("Accept-Encoding", "gzip, deflate, br");
+            request.Headers.Add("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
+            request.Headers.Add("Upgrade-Insecure-Requests", "1");
+            request.Headers.Host = "www1c.siscomex.receita.fazenda.gov.br";
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("Mozilla", "5.0"));
+            request.Headers.Connection.Add("keep-alive");
+            request.Headers.Referrer = new Uri("https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/AcompanharSituacaoDespacho.do");
+
+            var response = (await Client.SendAsync(request)).Content.ReadAsStringAsync();
+
+            return await response;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
 
         private static async Task CrawlerTask(string termo)
         {

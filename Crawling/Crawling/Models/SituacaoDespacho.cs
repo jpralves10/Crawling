@@ -13,6 +13,6 @@ namespace Crawling.Models
         public DocumentosInstrutivos DocumentosInstrutivos { get; set; }
         public string AFRMM { get; set; }
         public string ICMS { get; set; }
-        public Dictionary<string, string> SituacaoRVF { get; set; }
+        public Dictionary<int, Dictionary<string, string>> SituacaoRVF { get; set; }
     }
 }
