@@ -24,7 +24,8 @@ namespace Crawling.Controllers.Services
 
         public SiscomexService() { }
 
-        public SiscomexService(X509Certificate2 cert, HttpClientHandler cliHandler, HttpClient httpClient) {
+        public SiscomexService(X509Certificate2 cert, HttpClientHandler cliHandler, HttpClient httpClient)
+        {
             Certificate = cert;
             Handler = cliHandler;
             Client = httpClient;
@@ -36,7 +37,9 @@ namespace Crawling.Controllers.Services
 
         public void ConsultaLiEmLote(string termo)
         {
-            var html = ConsultaLiEmLoteRequest();
+            //var html = ConsultaLiEmLoteRequest();
+
+            ConsultaLiEmLoteRequest();
         }
 
         public void SitacaoDespachoAduaneiro(string termo)
@@ -328,14 +331,6 @@ namespace Crawling.Controllers.Services
         {
             var url = "https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/AcompanharSituacaoDespacho.do";
 
-            Handler = new HttpClientHandler();
-            Handler.ClientCertificates.Add(Certificate);
-            Handler.CookieContainer = new CookieContainer();
-            Handler.UseCookies = true;
-
-            Client = new HttpClient(Handler);
-            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
-
             var parameters = new List<KeyValuePair<string, string>>();
             parameters.Add(new KeyValuePair<string, string>("fase", "a"));
             parameters.Add(new KeyValuePair<string, string>("nrDeclaracao", ""));
@@ -366,14 +361,6 @@ namespace Crawling.Controllers.Services
                 "&quantidade=" + quantidade +
                 "&tipoRVF=" + tiporvf;
 
-            Handler = new HttpClientHandler();
-            Handler.ClientCertificates.Add(Certificate);
-            Handler.CookieContainer = new CookieContainer();
-            Handler.UseCookies = true;
-
-            Client = new HttpClient(Handler);
-            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
-
             var request = new HttpRequestMessage(HttpMethod.Get, url);
 
             request.Headers.Add("Accept", "ext/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
@@ -396,14 +383,6 @@ namespace Crawling.Controllers.Services
                 "numero=" + numero +
                 "&tipoInterrupcao=" + tipoInterrupcao;
 
-            Handler = new HttpClientHandler();
-            Handler.ClientCertificates.Add(Certificate);
-            Handler.CookieContainer = new CookieContainer();
-            Handler.UseCookies = true;
-
-            Client = new HttpClient(Handler);
-            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
-
             var request = new HttpRequestMessage(HttpMethod.Get, url);
 
             request.Headers.Add("Accept", "ext/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
@@ -420,37 +399,139 @@ namespace Crawling.Controllers.Services
             return await response;
         }
 
-        private static async Task<string> ConsultaLiEmLoteRequest()
+        private static async void ConsultaLiEmLoteRequest()
         {
-            var url = "https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/AcompanharSituacaoDespacho.do";
+            var url = "https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_consultar_lote_li.do";
 
-            Handler = new HttpClientHandler();
-            Handler.ClientCertificates.Add(Certificate);
-            Handler.CookieContainer = new CookieContainer();
-            Handler.UseCookies = true;
+            MultipartFormDataContent formData = new MultipartFormDataContent();
+            //formData.Add(new ByteArrayContent(File.ReadAllBytes("C:\\Eficilog\\consulta-por-lI.xml")));
+            var str = new StreamContent(new MemoryStream(File.ReadAllBytes("C:\\Eficilog\\consulta-por-lI.xml")));
+            formData.Add(str);
+            //request.Content = formData;
 
-            Client = new HttpClient(Handler);
-            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
+            var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = formData };
 
-            var parameters = new List<KeyValuePair<string, string>>();
-            parameters.Add(new KeyValuePair<string, string>("fase", "a"));
-            parameters.Add(new KeyValuePair<string, string>("nrDeclaracao", ""));
-            parameters.Add(new KeyValuePair<string, string>("declaracoesArray", "19/0430685-5"));
+            //HttpContent file = new StreamContent(new MemoryStream(array));       
 
-            var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = new FormUrlEncodedContent(parameters) };
-
-            request.Headers.Add("Accept", "ext/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+            request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3");
             request.Headers.Add("Accept-Encoding", "gzip, deflate, br");
             request.Headers.Add("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7");
             request.Headers.Add("Upgrade-Insecure-Requests", "1");
+            request.Headers.Add("Cache-Control", "max-age=0");
+            request.Headers.Add("Origin", "https://www1c.siscomex.receita.fazenda.gov.br");
             request.Headers.Host = "www1c.siscomex.receita.fazenda.gov.br";
             request.Headers.UserAgent.Add(new ProductInfoHeaderValue("Mozilla", "5.0"));
             request.Headers.Connection.Add("keep-alive");
-            request.Headers.Referrer = new Uri("https://www1c.siscomex.receita.fazenda.gov.br/impdespacho-web-7/AcompanharSituacaoDespachoMenu.do");
+            request.Headers.Referrer = new Uri("https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_menu_li_consultar_lote_li.do");
 
-            var response = (await Client.SendAsync(request)).Content.ReadAsStringAsync();
 
-            return await response;
+            HttpResponseMessage response = await Client.SendAsync(request);
+
+
+            response.StatusCode = HttpStatusCode.OK;
+            //response.Content = new StreamContent(new FileStream(@"C:\teste.xml", FileMode.Append));
+            response.Content.LoadIntoBufferAsync();  //.OutputStream.Write(buffer, 0, buffer.Length);
+
+            /*response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
+            response.Content.Headers.ContentDisposition.FileName = "CONSULTA.XXXXXX.xml";*/
+
+            response.Headers.Add("Content-Disposition", "attachment;filename=CONSULTA.XXXXXX.xml");
+            response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
+
+
+
+
+
+
+            /*if (response.IsSuccessStatusCode)
+            {
+                string stream = response.Content.ReadAsStringAsync().Result;
+
+            }
+            
+
+            var result = await Client.SendAsync(request);
+
+
+            HttpResponseMessage response = new HttpResponseMessage();
+            response.StatusCode = HttpStatusCode.OK;
+            response.Content = new StreamContent(result);
+            response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "foo.txt"
+            };
+            
+
+            Task<MultipartMemoryStreamProvider> result;
+
+            if ((await Client.SendAsync(request)).Content.)
+            {
+                result = (await Client.SendAsync(request)).Content.ReadAsMultipartAsync();
+            };
+
+            /*HttpResponseMessage result = await Client.SendAsync(request);
+
+            MemoryStream responseStream = new MemoryStream();
+            var stream = new FileStream(@"C:\teste.xml", FileMode.Open, FileAccess.Read);
+            result.Content = new StreamContent(stream);
+            result.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            */
+
+
+            //return await result;
         }
+
+
+
+
+
+
+        /*public string ConsultaLiEmLoteRequest()
+        {
+            var url = "https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_consultar_lote_li.do";
+
+            HttpWebRequest request = (HttpWebRequest) WebRequest.Create(url);
+
+            request 
+
+
+
+
+            byte[] bytes;
+            bytes = System.Text.Encoding.ASCII.GetBytes("C:\\Eficilog\\consulta-por-lI.xml");
+            //request.ContentType = "text/xml; encoding='utf-8'";
+            request.ContentType = "multipart/form-data";
+            request.ContentLength = bytes.Length;
+            request.Method = "POST";
+            Stream requestStream = request.GetRequestStream();
+            requestStream.Write(bytes, 0, bytes.Length);
+            requestStream.Close();
+
+            HttpWebResponse response;
+            response = (HttpWebResponse) request.GetResponse();
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                Stream responseStream = response.GetResponseStream();
+                string responseStr = new StreamReader(responseStream).ReadToEnd();
+                return responseStr;
+            }
+            return null;
+        }
+
+        /*{
+            MultipartFormDataContent form = new MultipartFormDataContent();
+
+            form.Add(new StringContent(username), "username");
+            form.Add(new StringContent(useremail), "email");
+            form.Add(new StringContent(password), "password");            
+            form.Add(new ByteArrayContent(file_bytes, 0, file_bytes.Length), "profile_pic", "hello1.jpg");
+            HttpResponseMessage response = await httpClient.PostAsync("PostUrl", form);
+
+            response.EnsureSuccessStatusCode();
+            httpClient.Dispose();
+            string sd = response.Content.ReadAsStringAsync().Result;
+        }*/
+
     }
 }
