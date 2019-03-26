@@ -404,10 +404,18 @@ namespace Crawling.Controllers.Services
             var url = "https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_consultar_lote_li.do";
 
             MultipartFormDataContent formData = new MultipartFormDataContent();
+
+            var file = File.ReadAllText("C:\\Eficilog\\consulta-por-lI.xml", Encoding.GetEncoding("ISO-8859-1"));
+
+            //http://www.csharp411.com/c-convert-string-to-stream-and-stream-to-string/
+            //https://social.msdn.microsoft.com/Forums/pt-BR/a46689b7-a362-4bf4-a825-78f15cee6174/how-to-encode-multipartformdatacontent-to-utf8?forum=winappswithcsharp
+
+            //file.
+
             //formData.Add(new ByteArrayContent(File.ReadAllBytes("C:\\Eficilog\\consulta-por-lI.xml")));
-            var str = new StreamContent(new MemoryStream(File.ReadAllBytes("C:\\Eficilog\\consulta-por-lI.xml")));
-            formData.Add(str);
-            //request.Content = formData;
+            var str = new StreamContent(new MemoryStream());
+
+            formData.Add(str, "arquivo", "CONSULTA.XXXXXX.xml");
 
             var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = formData };
 
@@ -424,8 +432,23 @@ namespace Crawling.Controllers.Services
             request.Headers.Connection.Add("keep-alive");
             request.Headers.Referrer = new Uri("https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_menu_li_consultar_lote_li.do");
 
-
             HttpResponseMessage response = await Client.SendAsync(request);
+
+            var result = response.Content.ReadAsStreamAsync();
+
+            using (var streamReader = new StreamReader(result.Result))
+            {
+                var resultStr = streamReader.ReadToEnd();
+            }
+
+            //var result = (await Client.SendAsync(request)).Content.ReadAsStreamAsync();
+
+            string aqui = "10";
+
+            
+
+
+            /*HttpResponseMessage response = await Client.SendAsync(request);
 
 
             response.StatusCode = HttpStatusCode.OK;
@@ -435,10 +458,9 @@ namespace Crawling.Controllers.Services
             /*response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
             response.Content.Headers.ContentDisposition.FileName = "CONSULTA.XXXXXX.xml";*/
 
-            response.Headers.Add("Content-Disposition", "attachment;filename=CONSULTA.XXXXXX.xml");
+            /*response.Headers.Add("Content-Disposition", "attachment;filename=CONSULTA.XXXXXX.xml");
             response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
-
-
+            */
 
 
 
