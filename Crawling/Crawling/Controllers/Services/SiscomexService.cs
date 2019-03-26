@@ -399,21 +399,21 @@ namespace Crawling.Controllers.Services
             return await response;
         }
 
-        private static async void ConsultaLiEmLoteRequest()
+        private static async void ConsultaLiEmLoteRequest_2()
         {
             var url = "https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_consultar_lote_li.do";
 
             MultipartFormDataContent formData = new MultipartFormDataContent();
 
-            var file = File.ReadAllText("C:\\Eficilog\\consulta-por-lI.xml", Encoding.GetEncoding("ISO-8859-1"));
+            var file = File.ReadAllText("C:\\Eficilog\\consulta-por-lI.xml");
 
             //http://www.csharp411.com/c-convert-string-to-stream-and-stream-to-string/
             //https://social.msdn.microsoft.com/Forums/pt-BR/a46689b7-a362-4bf4-a825-78f15cee6174/how-to-encode-multipartformdatacontent-to-utf8?forum=winappswithcsharp
 
-            //file.
+            byte[] byteArray = Encoding.UTF8.GetBytes(file);
 
             //formData.Add(new ByteArrayContent(File.ReadAllBytes("C:\\Eficilog\\consulta-por-lI.xml")));
-            var str = new StreamContent(new MemoryStream());
+            var str = new StreamContent(new MemoryStream(byteArray));
 
             formData.Add(str, "arquivo", "CONSULTA.XXXXXX.xml");
 
@@ -505,55 +505,135 @@ namespace Crawling.Controllers.Services
 
 
 
-
-
-
-        /*public string ConsultaLiEmLoteRequest()
+        public static async Task<string> ConsultaLiEmLoteRequest()
         {
-            var url = "https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_consultar_lote_li.do";
-
-            HttpWebRequest request = (HttpWebRequest) WebRequest.Create(url);
-
-            request 
-
-
-
-
-            byte[] bytes;
-            bytes = System.Text.Encoding.ASCII.GetBytes("C:\\Eficilog\\consulta-por-lI.xml");
-            //request.ContentType = "text/xml; encoding='utf-8'";
-            request.ContentType = "multipart/form-data";
-            request.ContentLength = bytes.Length;
-            request.Method = "POST";
-            Stream requestStream = request.GetRequestStream();
-            requestStream.Write(bytes, 0, bytes.Length);
-            requestStream.Close();
-
-            HttpWebResponse response;
-            response = (HttpWebResponse) request.GetResponse();
-
-            if (response.StatusCode == HttpStatusCode.OK)
+            using (var client = Client)
             {
-                Stream responseStream = response.GetResponseStream();
-                string responseStr = new StreamReader(responseStream).ReadToEnd();
-                return responseStr;
+                var teste = await client.GetAsync("https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_menu_li_consultar_lote_li.do");
+
+                var url = "https://www1c.siscomex.receita.fazenda.gov.br/li_web-7/liweb_consultar_lote_li.do";
+
+                var path = "C:\\Eficilog\\consulta-por-lI.xml";
+
+                byte[] byteArray = Encoding.UTF8.GetBytes(File.ReadAllText(path));
+
+                string boundary = "----WebKitFormBoundary" + DateTime.Now.Ticks.ToString("x");
+
+                using (var content = new MultipartFormDataContent(boundary))
+                {
+                    /*content.Headers.Remove("Content-Type");
+                    content.Headers.TryAddWithoutValidation("Content-Type", "multipart/form-data; boundary=" + boundary);
+                    content.Headers.ContentLength = (long) byteArray.Length;*/
+
+                    var streamContent = new StreamContent(new MemoryStream(byteArray));
+                    streamContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data");
+                    streamContent.Headers.ContentDisposition.Name = "\"arquivo\"";
+                    streamContent.Headers.ContentDisposition.FileName = "\"" + Path.GetFileName(path) + "\"";
+                    //streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+                    streamContent.Headers.Remove("Content-Type");
+                    streamContent.Headers.TryAddWithoutValidation("Content-Type", "multipart/form-data; boundary=" + boundary);
+                    //streamContent.Headers.ContentLength = (long) byteArray.Length;                   
+
+                    //content.Add(streamContent, "arquivo", Path.GetFileName(path));
+                    content.Add(streamContent);
+
+
+                    using (var message = await client.PostAsync(url, content))
+                    {
+                        var input = await message.Content.ReadAsStringAsync();
+
+                        return !string.IsNullOrWhiteSpace(input) ? input : null;
+                    }
+                }
             }
-            return null;
         }
 
-        /*{
-            MultipartFormDataContent form = new MultipartFormDataContent();
 
-            form.Add(new StringContent(username), "username");
-            form.Add(new StringContent(useremail), "email");
-            form.Add(new StringContent(password), "password");            
-            form.Add(new ByteArrayContent(file_bytes, 0, file_bytes.Length), "profile_pic", "hello1.jpg");
-            HttpResponseMessage response = await httpClient.PostAsync("PostUrl", form);
 
-            response.EnsureSuccessStatusCode();
-            httpClient.Dispose();
-            string sd = response.Content.ReadAsStringAsync().Result;
+
+        /*public static string UploadFilesToRemoteUrl(string url, string[] files, NameValueCollection formFields = null)
+        {
+            string boundary = "----------------------------" + DateTime.Now.Ticks.ToString("x");
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.ContentType = "multipart/form-data; boundary=" +
+                                    boundary;
+            request.Method = "POST";
+            request.KeepAlive = true;
+
+            Stream memStream = new System.IO.MemoryStream();
+
+            var boundarybytes = System.Text.Encoding.ASCII.GetBytes("\r\n--" +
+                                                                    boundary + "\r\n");
+            var endBoundaryBytes = System.Text.Encoding.ASCII.GetBytes("\r\n--" +
+                                                                        boundary + "--");
+
+
+            string formdataTemplate = "\r\n--" + boundary +
+                                        "\r\nContent-Disposition: form-data; name=\"{0}\";\r\n\r\n{1}";
+
+            if (formFields != null)
+            {
+                foreach (string key in formFields.Keys)
+                {
+                    string formitem = string.Format(formdataTemplate, key, formFields[key]);
+                    byte[] formitembytes = System.Text.Encoding.UTF8.GetBytes(formitem);
+                    memStream.Write(formitembytes, 0, formitembytes.Length);
+                }
+            }
+
+            string headerTemplate =
+                "Content-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\n" +
+                "Content-Type: application/octet-stream\r\n\r\n";
+
+            for (int i = 0; i < files.Length; i++)
+            {
+                memStream.Write(boundarybytes, 0, boundarybytes.Length);
+                var header = string.Format(headerTemplate, "uplTheFile", files[i]);
+                var headerbytes = System.Text.Encoding.UTF8.GetBytes(header);
+
+                memStream.Write(headerbytes, 0, headerbytes.Length);
+
+                using (var fileStream = new FileStream(files[i], FileMode.Open, FileAccess.Read))
+                {
+                    var buffer = new byte[1024];
+                    var bytesRead = 0;
+                    while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) != 0)
+                    {
+                        memStream.Write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+
+            memStream.Write(endBoundaryBytes, 0, endBoundaryBytes.Length);
+            request.ContentLength = memStream.Length;
+
+            using (Stream requestStream = request.GetRequestStream())
+            {
+                memStream.Position = 0;
+                byte[] tempBuffer = new byte[memStream.Length];
+                memStream.Read(tempBuffer, 0, tempBuffer.Length);
+                memStream.Close();
+                requestStream.Write(tempBuffer, 0, tempBuffer.Length);
+            }
+
+            using (var response = request.GetResponse())
+            {
+                Stream stream2 = response.GetResponseStream();
+                StreamReader reader2 = new StreamReader(stream2);
+                return reader2.ReadToEnd();
+            }
         }*/
+
+
+
+
+
+
+
+
+
 
     }
 }
