@@ -19,12 +19,12 @@ using Crawling.Utils;
 
 namespace Crawling.Controllers.Services
 {
-    public class SiscomexService
+    public class SiscomexReceita
     {
 
-        public SiscomexService() { }
+        public SiscomexReceita() { }
 
-        public SiscomexService(X509Certificate2 cert, HttpClientHandler cliHandler, HttpClient httpClient)
+        public SiscomexReceita(X509Certificate2 cert, HttpClientHandler cliHandler, HttpClient httpClient)
         {
             Certificate = cert;
             Handler = cliHandler;
@@ -37,9 +37,24 @@ namespace Crawling.Controllers.Services
 
         public void ConsultaLiEmLote(string termo)
         {
-            //var html = ConsultaLiEmLoteRequest();
+            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
 
+            Login();
             ConsultaLiEmLoteRequest();
+        }
+
+        public static async Task<bool> Login()
+        {
+            try
+            {
+                var status = await Client.GetAsync("/siscomexImpweb-7/private_siscomeximpweb_inicio.do");
+                return status.StatusCode == HttpStatusCode.OK;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("ERRO");
+                return false;
+            }
         }
 
         public void SitacaoDespachoAduaneiro(string termo)

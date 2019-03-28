@@ -1,19 +1,12 @@
 ﻿using System;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Linq;
-using HtmlAgilityPack;
 using System.Net.Http;
 using System.Net;
-using System.Web;
-using System.IO;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Crawling.Models;
-using System.Net.Http.Headers;
 using Crawling.Utils;
 using Crawling.Controllers.Services;
 
@@ -67,10 +60,7 @@ namespace Crawling.Controllers
 
                 setParametrosConexcao();
 
-                if (Login().GetAwaiter().GetResult())
-                {
-                    AcessarServicos(termoPesquisa);
-                }
+                AcessarServicos(termoPesquisa);
 
                 if (list.Count > 0)
                 {
@@ -95,30 +85,17 @@ namespace Crawling.Controllers
             Handler.UseCookies = true;
 
             Client = new HttpClient(Handler);
-            Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
-        }
-
-        public static async Task<bool> Login()
-        {
-            try
-            {
-                var status = await Client.GetAsync("/siscomexImpweb-7/private_siscomeximpweb_inicio.do");
-                return status.StatusCode == HttpStatusCode.OK;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("ERRO");
-                return false;
-            }
         }
 
         public static void AcessarServicos(string termo)
         {
-            var siscomex = new SiscomexService(Certificate, Handler, Client);
+            /*var siscomex = new SiscomexReceita(Certificate, Handler, Client);
             //siscomex.SitacaoDespachoAduaneiro(termo);
-            siscomex.ConsultaLiEmLote(termo);
-        }
+            siscomex.ConsultaLiEmLote(termo);*/
 
+            var siscomex = new SiscomexPortalUnico(Certificate, Handler, Client);
+            siscomex.CatalogoProdutos(10);
+        }
 
         /*private static async Task CrawlerTask(string termo)
         {
