@@ -77,6 +77,8 @@ namespace Crawling.Controllers
 
         public static void setParametrosConexcao()
         {
+            System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+
             Certificate = CertificateManager.GetAllCertificates().FirstOrDefault(c => c.FriendlyName.Contains("WAGNER"));
 
             Handler = new HttpClientHandler();

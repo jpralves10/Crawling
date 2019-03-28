@@ -8,22 +8,22 @@ namespace Crawling.Models
     public class CatalogoProduto
     {
         public int seq { get; set; }
-        //public int codigo { get; set; }
+        public string codigo { get; set; }
         public string descricao { get; set; }
         public string cnpjRaiz { get; set; }
         public string situacao { get; set; }
         public string modalidade { get; set; }
         public string ncm { get; set; }
-        /*public int codigoNaladi { get; set; }
-        public int codigoGPC { get; set; }
-        public int codigoGPCBrick { get; set; }
-        public int codigoUNSPSC { get; set; }*/
+        public Nullable<int> codigoNaladi { get; set; }
+        public Nullable<int> codigoGPC { get; set; }
+        public Nullable<int> codigoGPCBrick { get; set; }
+        public Nullable<int> codigoUNSPSC { get; set; }
         public string paisOrigem { get; set; }
         public Boolean fabricanteConhecido { get; set; }
-        /*public string cpfCnpjFabricante { get; set; }
+        public string cpfCnpjFabricante { get; set; }
         public string codigoOperadorEstrangeiro { get; set; }
         public List<Atributos> atributos { get; set; }
-        public List<string> codigosInterno { get; set; }*/
+        public List<string> codigosInterno { get; set; }
     }
 
     public class Atributos

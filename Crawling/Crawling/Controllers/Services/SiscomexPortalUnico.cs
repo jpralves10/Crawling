@@ -7,6 +7,8 @@ using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Net;
 using System;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Crawling.Controllers.Services
 {
@@ -25,20 +27,51 @@ namespace Crawling.Controllers.Services
         public static HttpClientHandler Handler { get; set; }
         public static HttpClient Client { get; set; }
 
+        public static string setToken { get; set; }
+        public static string xCSRFToken { get; set; }
+        public static string xCSRFExpiration { get; set; }
+
         public void CatalogoProdutos(int codigo)
         {
-            Client.BaseAddress = new Uri("https://portalunico.siscomex.gov.br/portal");
+            Client.BaseAddress = new Uri("https://val.portalunico.siscomex.gov.br");
 
-            Login();
-            IncluirAlterarProduto();
+            if (Login().GetAwaiter().GetResult())
+            {
+                IncluirAlterarProduto();
+            }            
         }
 
         public static async Task<bool> Login()
         {
             try
-            {
-                var status = await Client.GetAsync("/#/");
-                return status.StatusCode == HttpStatusCode.OK;
+            {   
+                string regexTokens = "(Set-Token:[.\\s\\S]*)";
+                string regexCaracteres = "(Set-Token:\\s|X-CSRF-Token:\\s|X-CSRF-Expiration:\\s)";
+
+                var request = new HttpRequestMessage(HttpMethod.Post, "/portal/api/autenticar");
+
+                request.Headers.Add("Role-Type", "IMPEXP");
+
+                var result = await Client.SendAsync(request);
+
+                if (result.StatusCode == HttpStatusCode.OK)
+                {
+                    var headers = result.Headers.ToString();
+
+                    Match match_consulta = new Regex(regexTokens).Match(headers);
+                    headers = Regex.Replace(match_consulta.Value, regexCaracteres, "");
+
+                    var tokens = headers.Split("\r\n");
+
+                    setToken = tokens[0];
+                    xCSRFToken = tokens[1];
+                    xCSRFExpiration = tokens[2];
+
+                    var resultJson = result.Content.ReadAsStringAsync();
+
+                    return true;
+                }
+                return false;
             }
             catch (Exception e)
             {
@@ -51,13 +84,18 @@ namespace Crawling.Controllers.Services
         {
             string url = "https://val.portalunico.siscomex.gov.br/catp/api/ext/produto";
 
-            string listaProdutos = catalogoProdutoJson();
+            string produtosJson = catalogoProdutoJson();
 
-            //string listaProdutos = "[{ \"seq\":1, \"descricao\":\"Produto Teste\", \"cnpjRaiz\":\"0289824000158\", \"situacao\":\"ATIVADO\", \"modalidade\":\"IMPORTACAO\", \"ncm\":\"01019000\", \"paisOrigem\":\"AR\", \"fabricanteConhecido\":false }]";
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
 
-            Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            var content = new StringContent(produtosJson, Encoding.UTF8, "application/json");
 
-            var response = Client.PostAsJsonAsync(url, listaProdutos).Result;
+            request.Content = content;
+
+            request.Headers.Add("Authorization", setToken);
+            request.Headers.Add("X-CSRF-Token", xCSRFToken);
+
+            var response = Client.SendAsync(request).Result;
 
             if (response.IsSuccessStatusCode)
             {
@@ -71,13 +109,14 @@ namespace Crawling.Controllers.Services
             CatalogoProduto produto = new CatalogoProduto();
 
             produto.seq = 1;
+            produto.codigo = "1";
             produto.descricao = "Produto Teste";
-            produto.cnpjRaiz = "0289824000158";
+            produto.cnpjRaiz = "00913443";
             produto.situacao = "RASCUNHO";
             produto.modalidade = "IMPORTACAO";
-            produto.ncm = "01019000";
+            produto.ncm = "40169990";
             produto.fabricanteConhecido = false;
-            produto.paisOrigem = "AR";
+            produto.paisOrigem = "FR";
 
             listCatalogoProdutos.Add(produto);
 
