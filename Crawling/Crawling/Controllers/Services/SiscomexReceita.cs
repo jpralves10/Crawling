@@ -38,9 +38,11 @@ namespace Crawling.Controllers.Services
         public void ConsultaLiEmLote(string termo)
         {
             Client.BaseAddress = new Uri("https://www1c.siscomex.receita.fazenda.gov.br");
-
-            Login();
-            ConsultaLiEmLoteRequest();
+            
+            if (Login().GetAwaiter().GetResult())
+            {
+                ConsultaLiEmLoteRequest();
+            }
         }
 
         public static async Task<bool> Login()

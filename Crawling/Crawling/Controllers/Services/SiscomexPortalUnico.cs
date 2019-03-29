@@ -9,6 +9,7 @@ using System.Net;
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
+using Crawling.Utils;
 
 namespace Crawling.Controllers.Services
 {
@@ -119,6 +120,8 @@ namespace Crawling.Controllers.Services
             produto.paisOrigem = "FR";
 
             listCatalogoProdutos.Add(produto);
+
+            MongoConnection.CatalogoProduto_doc.InsertManyAsync(listCatalogoProdutos);
 
             return JsonConvert.SerializeObject(listCatalogoProdutos);
         }

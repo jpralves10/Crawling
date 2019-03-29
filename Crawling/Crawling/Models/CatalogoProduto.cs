@@ -2,87 +2,77 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Crawling.Models
 {
     public class CatalogoProduto
     {
+        [BsonId()]
         public int seq { get; set; }
+
+        [BsonElement("codigo")]
         public string codigo { get; set; }
+
+        [BsonElement("descricao")]
         public string descricao { get; set; }
+
+        [BsonRequired()]
+        [BsonElement("cnpjRaiz")]
         public string cnpjRaiz { get; set; }
+
+        [BsonRequired()]
+        [BsonElement("situacao")]
         public string situacao { get; set; }
+
+        [BsonRequired()]
+        [BsonElement("modalidade")]
         public string modalidade { get; set; }
+
+        [BsonRequired()]
+        [BsonElement("ncm")]
         public string ncm { get; set; }
+
+        [BsonElement("codigoNaladi")]
         public Nullable<int> codigoNaladi { get; set; }
+
+        [BsonElement("codigoGPC")]
         public Nullable<int> codigoGPC { get; set; }
+
+        [BsonElement("codigoGPCBrick")]
         public Nullable<int> codigoGPCBrick { get; set; }
+
+        [BsonElement("codigoUNSPSC")]
         public Nullable<int> codigoUNSPSC { get; set; }
+
+        [BsonRequired()]
+        [BsonElement("paisOrigem")]
         public string paisOrigem { get; set; }
+
+        [BsonRequired()]
+        [BsonElement("fabricanteConhecido")]
         public Boolean fabricanteConhecido { get; set; }
+
+        [BsonElement("cpfCnpjFabricante")]
         public string cpfCnpjFabricante { get; set; }
+
+        [BsonElement("codigoOperadorEstrangeiro")]
         public string codigoOperadorEstrangeiro { get; set; }
+
+        [BsonElement("atributos")]
         public List<Atributos> atributos { get; set; }
+
+        [BsonElement("codigosInterno")]
         public List<string> codigosInterno { get; set; }
     }
 
     public class Atributos
     {
+        [BsonElement("atributo")]
         public string atributo { get; set; }
+
+        [BsonElement("valor")]
         public string valor { get; set; }
     }
 }
-
-
-/*{
-		  "codigo" : "ATT_1",
-		  "nomeApresentacao" : "Destaque",
-		  "orientacaoPreenchimento" : "Escolher apenas um Destaque",
-		  "formaPreenchimento" : "Lista estática",
-		  "modalidade" : "Exportação",
-		  "obrigatorio" : true,
-		  "dataInicioVigencia" : "2014-10-23",
-		  "dominio" : [ {
-			"codigo" : "01",
-			"descricao" : "EXCETO DE ESPÉCIES DOMÉSTICAS, CONFORME PORTARIA IBAMA 93/98"
-		  }, {
-			"codigo" : "99",
-			"descricao" : "DEMAIS"
-		  } ],
-		  "objetivos" : [ {
-			"codigo" : 3,
-			"descricao" : "Tratamento administrativo"
-		  } ],
-		  "orgaos" : [ "SECEX", "IBAMA" ],
-		  "formaPreenchimentoAtributo" : "LISTA_ESTATICA"
-		}
-
-
-[
-  {
-    "seq": 1,
-    "codigo": 123,
-    "descricao": "Produto Teste",
-    "cnpjRaiz": "00000000",
-    "situacao": "ATIVADO",
-    "modalidade": "EXPORTACAO",
-    "ncm": "02011000",
-    "codigoNaladi": 123,
-    "codigoGPC": 456,
-    "codigoGPCBrick": 789,
-    "codigoUNSPSC": 012,
-    "paisOrigem": "AR",
-    "fabricanteConhecido": true,
-    "codigoOperadorEstrangeiro": "123",
-    "atributos": [
-      {
-        "atributo": "ATT_1",
-        "valor": "teste"
-      }
-    ],
-    "codigosInterno": [
-      "1",
-      "2"
-    ]
-  }
-]*/
